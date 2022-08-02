@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: docker-app-
+spec:
+  entrypoint: docker
+  templates:
+  - name: docker
+    dag:
+      tasks:
+      - name: docker-push
+        template: docker-push-template
+
+  - name: docker-push-template
+    volumes:
+      - name: docker-config
+        secret:
+          secretName: docker-config
+    container:
+      image: moby/buildkit:latest
+      volumeMounts:
+        - name: docker-config
+          mountPath: /.docker
+      workingDir: /app
+      env:
+        - name: DOCKER_CONFIG
+          value: /.docker
+      command:
+        - buildctl
+      args:
+        - build
+        - --frontend=dockerfile.v0
+        - --local
+        - context=.
+        - --local
+        - dockerfile=.
+        - --output
+        - type=image,name=docker.io/hidemitsu/node-app:latest,push=true
